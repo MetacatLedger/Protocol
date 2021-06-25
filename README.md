@@ -1,5 +1,4 @@
-# Protocol
-# 0x protocol 3.0 specification
+# Metacat Protocol specification (from 0x)
 
 ## Table of contents
 
@@ -65,4 +64,49 @@ The `Exchange` contract contains the bulk of the business logic within 0x protoc
 7.  Setting protocol fee specific parameters
 
 ## AssetProxy
+
+Doing any sort of division in the EVM may result in rounding errors. [`fillOrder`](#fillorder) and [`matchOrder`](#matchorder) variants limit the allowed rounding error to 0.1% (and will otherwise revert). Note that the rounding is _always_ done in favor of an order's maker.
+
+## Differences from 2.0
+
+### Changes to order fills
+
+- The introduction of [protocol fees](#protocol-fees)
+- Order fees can now be charges in arbitrary assets with the new [`makerFeeAssetData` and `takerFeeAssetData` fields](#order-message-format)
+- `marketBuyOrders` and `marketSellOrders` have been deprecated
+- The addition of [`marketBuyOrdersFillOrKill`](#marketbuyordersfillorkill) and [`marketSellOrdersFillOrKill`](#marketsellordersfillorkill)
+- All of the `marketBuy*` and `marketSell*` functions now allow multiple different assets to be bought or sold (be careful with this!)
+- The ordering of transfers during a single fill has changed. A fill now first transfers an asset from the taker to the maker, opening up the ability to integrate the [`ERC20BridgeProxy`](https://github.com/0xProject/ZEIPs/issues/47) (along with other similar contracts)
+
+### Changes to order matching
+
+- The addition of a new matching strategy with [`matchOrdersWithMaximalFill`](#matchorderswithmaximalfill)
+- The addition of new functions for matching batches of orders, [`batchMatchOrders`](#batchmatchorders) and [`batchMatchOrdersWithMaximalFill`](#batchmatchorderswithmaximalfill)
+
+### Changes to order cancellations
+
+- The [`cancelOrder`](#cancelorder) function is much less strict and will only revert if called with an invalid context
+
+### Changes to 0x transactions
+
+- The addition of new [`expirationTimeSeconds` and `gasPrice` fields](#transaction-message-format) to 0x transactions
+- [`executeTransaction`](#executetransaction) now takes a [`ZeroExTransaction`](#zeroextransaction) struct as an input
+- [`executeTransaction`](#executetransaction) now emits a [`TransactionExecution`](#transactionexecution) event upon successful execution
+- Addition of [`batchExecuteTransaction`](#batchexecutetransactions) for atomically executing multiple 0x transactions
+
+### Changes to signature validation
+
+- The [`Validator`](#validator) signature type now expects the verifying contract to be [`EIP-1271`](<#[EIP-1271](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1271.md)>) compliant, allowing it to validate individual fields of orders or transactions
+- The addition of a new [`EIP1271Wallet`](#eip1271wallet) signature type that allows a wallet contract to validate individual fields of orders or transactions
+
+### Changes to developer experience
+
+- The introduction of [rich reverts](#rich-reverts)
+- The addition of a helper function for [simulating actual transfers](#simulating-fill-transfers)
+- `getOrdersInfo` has been deprecated (an external contract can be deployed for querying the state of multiple orders in a single call)
+
+### Miscellaneous changes
+
+- All non-administrative functions that can write to state have been made `payable` to allow paying protocol fees in ETH
+- The [EIP-712](#eip-712-usage) domain hash calculation now includes a `chainId`
 
